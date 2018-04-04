@@ -94,6 +94,15 @@ int main (int argc, char *argv[]) {
       exit(-1);
     }
     printf("Received: %s",buffer);
+
+    // envoi de fichier à faire !!!!!
+
+    /* Vérifier que le fichier soit bien découpé, que les trames s'envoient bien, faire attention
+    au seq_no et au EOF
+    */
+
+    /* on envoyait depuis tpclient vers tpserveur. faut faire l'inverse ici */
+
   }
 
   return 1;

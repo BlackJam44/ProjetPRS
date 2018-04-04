@@ -68,36 +68,33 @@ CONNECT* openServer(int socket, struct sockaddr* addr){ // exécuté côté clie
 
 CONNECT* openClient(int socket, struct sockaddr* addr){ // exécuté côté serveur
 	int size = sizeof(struct sockaddr);
-	char msg[8];
-	char req1[10];
-	char req2[10];
+	char msg[12];
+	char req1[12];
+	char req2[12];
 	char* no_port = (char*)malloc(sizeof(char));
 
-	printf("Waiting for connection...\n");
-	strcpy(msg, "SYN-ACK");
+	printf("Initializing connection...\n");
 
-	if(recvfrom(socket, req1, 10, 0, addr, &size) == -1){
+	if(recvfrom(socket, req1, 12, 0, addr, &size) == -1){
 		perror("Error: SYN reception\n");
 		close(socket);
 		exit(-1);
 	}
 
+	printf("Received message: %s \n", req1);
 	if (strcmp(req1,"SYN") == 0) {
-		if(sendto(socket, msg, 8, 0, addr, size) == -1){
-			perror("Error: SYN-ACK\n");
-			close(socket);
-			exit(-1);
-		}
-
-		// wait(1);
+		strcpy(msg, "SYN-ACK");
 		strcpy(no_port, getPort());
-		if(sendto(socket, no_port, 5, 0, addr, size) == -1){
-			perror("Error: port number\n");
+		strcat(msg, no_port);
+
+		if(sendto(socket, msg, 12, 0, addr, size) == -1){
+			perror("Error: SYN-ACK port number sending\n");
 			close(socket);
 			exit(-1);
 		}
+		printf("Sending %s... \n", msg);
 
-		if(recvfrom(socket, req2, 10, 0, addr, &size)== -1){
+		if(recvfrom(socket, req2, 12, 0, addr, &size)== -1){
 			perror("Error: ACK reception\n");
 			close(socket);
 			exit(-1);
@@ -112,8 +109,6 @@ CONNECT* openClient(int socket, struct sockaddr* addr){ // exécuté côté serv
 			close(socket);
 			exit(-1);
 	}
-
-	printf("\tConnection initialized.\n");
 
 	// structure retournée
 	CONNECT* res = (CONNECT*)malloc(sizeof(CONNECT));

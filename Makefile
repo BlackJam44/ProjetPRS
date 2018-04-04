@@ -27,4 +27,4 @@ functions.o: functions.c functions.h
 	${CC} ${CFLAGS} functions.c -o functions.o
 
 clean:
-	rm -f *~ *.o Serveur1-PcqCestNotreProjet Serveur2-PcqCestNotreProjet Serveur3-PcqCestNotreProjet copy_nantes.jpg copy_moscow.jpg
+	rm -f *~ *.o Serveur1-PcqCestNotreProjet Serveur2-PcqCestNotreProjet Serveur3-PcqCestNotreProjet image.jpg copy_nantes.jpg copy_moscow.jpg
