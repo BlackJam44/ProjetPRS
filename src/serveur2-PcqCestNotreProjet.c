@@ -74,7 +74,7 @@ int main (int argc, char *argv[]) {
   }
 
 
-  //while (init->result) {
+  while (init->result) {
     printf("\nEn attente de demande de la part du client... \n");
 
     // data reception
@@ -85,7 +85,51 @@ int main (int argc, char *argv[]) {
     }
     printf("Fichier requis par le client : %s\n",buffer);
 
-    //-----------------------------------------------------------------------------------------------
+    FILE* fichier_client = fopen(buffer, "r");
+    if(!fichier_client){
+      perror("Error: file opening\n");
+      exit(-1);
+    } else{
+      int c;
+      int i = 0;
+      int no_seq = 0;
+
+      while((c=fgetc(fichier_client)) != EOF) {
+        no_seq++;
+        char* trame = malloc(RCVSIZE*sizeof(char));
+        
+
+        while(i < RCVSIZE-6) {
+          chaine[i+6] = (char) c;
+          i++;
+        }
+      }
+
+      /*
+      do {
+    		FRAME* frame= (FRAME*)malloc(sizeof(FRAME));
+        c = fgetc(fichier_client);
+
+        free(frame);
+        i++;
+      } while ((c != EOF)&&(i<RCVSIZE-6)); */
+
+      fclose(fichier_client);
+    }
+
+
+
+/* Envoi du fichier au client :
++ ouverture et lecture du fichier
+* fragmentation en trames et creation no_seq
+* envoi de la trame N
+* reception du ACK N
+* envoi du message "FIN"
+*/
+
+
+
+//-----------------------------------------------------------------------------------------------
 
 /*
 		while(1){
@@ -135,7 +179,8 @@ int main (int argc, char *argv[]) {
 
     memset(buffer,0,RCVSIZE);
     memset(echo,0,RCVSIZE);
-  }*/
+    */
+  }
 
   memset(buffer,0,RCVSIZE);
 

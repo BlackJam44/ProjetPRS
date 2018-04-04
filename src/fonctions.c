@@ -28,8 +28,7 @@ CONNECT* openClient(int socket, struct sockaddr* addr){ // exécuté côté serv
 		close(socket);
 		exit(-1);
 	}
-	printf("%s recu !\n", req_client);
-	
+
 	strcpy(msg, "SYN-ACK");
 	strcpy(no_port, getPort());
 	strcat(msg, no_port);
@@ -89,10 +88,13 @@ FRAME* fragment(FILE* fp, char* filename, int index){
 	return frame;
 }
 
-char* normalizeNumber(char* noSeq){
+char* normalizeNumber(int noSeq){
 	char normalized[6] = "000000";
 	int n, i;
-  n = strlen(noSeq);
+	switch(noSeq){
+		
+	}
+
 	for(i=0; i<n; i++){
 		normalized[6-n+i]=noSeq[i];
 	}

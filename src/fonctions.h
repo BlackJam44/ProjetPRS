@@ -21,6 +21,6 @@ CONNECT* openClient(int socket, struct sockaddr* addr);
 int createChannel(int no_port);
 char* getPort();
 FRAME* fragment(FILE* fp, char* filename, int index);
-char* normalizeNumber(char* noSeq);
+char* normalizeNumber(int noSeq);
 
 #endif
