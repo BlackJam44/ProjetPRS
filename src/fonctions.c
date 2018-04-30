@@ -21,31 +21,31 @@ CONNECT* openClient(int socket, struct sockaddr* addr){ // exécuté côté serv
 	char req_client[4]; 	// "SYN" ou "ACK"
 	char* no_port = (char*)malloc(sizeof(char));
 
-	printf("En attente de connexion...\n");
+	printf("Waiting for connection...\n");
 
 	if((recvfrom(socket, req_client, 10, 0, addr, &size) == -1)||(strcmp(req_client,"SYN") != 0)){
 		perror("Error: SYN reception\n");
 		close(socket);
 		exit(-1);
-	}
+	} else printf("Received message: %s\n", req_client);
 
 	strcpy(msg, "SYN-ACK");
 	strcpy(no_port, getPort());
 	strcat(msg, no_port);
-	if(sendto(socket, msg, 8, 0, addr, size) == -1){
+	if(sendto(socket, msg, 12, 0, addr, size) == -1){
 		perror("Error: SYN-ACK<no_port>\n");
 		close(socket);
 		exit(-1);
-	}
+	} else printf("Sending %s...\n", msg);
 
 	memset(req_client,0,4);
 	if((recvfrom(socket, req_client, 4, 0, addr, &size)== -1)||(strcmp(req_client,"ACK") != 0)){
 		perror("Error: ACK reception\n");
 		close(socket);
 		exit(-1);
-	}
+	} else printf("Received message: %s\n", req_client);
 
-	printf("\tConnexion ouverte.\n");
+	printf("\tConnection established.\n");
 
 	CONNECT* res = (CONNECT*)malloc(sizeof(CONNECT));
 	res->result = 1;
@@ -62,7 +62,7 @@ char* getPort(){
 	char* res = (char*)malloc(sizeof(char));
 	int a = (rand()%(9000-25)) + 1025;
 	snprintf(res, 5, "%d", a);
-	printf("Nouveau port : %s\n", res);
+	//printf("New port: %s\n", res);
 	return res;
 }
 
@@ -88,15 +88,37 @@ FRAME* fragment(FILE* fp, char* filename, int index){
 	return frame;
 }
 
-char* normalizeNumber(int noSeq){
-	char normalized[6] = "000000";
-	int n, i;
-	switch(noSeq){
-		
+char* normalizeNumber(char* noSeq){
+	static char normalized[6+1];
+	int s = strlen(noSeq);
+	// ajout des zéros initiaux
+	switch(s){
+		case 0:
+			perror("Error: size of noSeq equal to zero\n");
+			close(socket);
+			exit(-1);
+		break;
+		case 1:
+			strcpy(normalized, "00000");
+		break;
+		case 2:
+			strcpy(normalized, "0000");
+		break;
+		case 3:
+			strcpy(normalized, "000");
+		break;
+		case 4:
+			strcpy(normalized, "00");
+		break;
+		case 5:
+			strcpy(normalized, "0");
+		break;
+		case 6:
+			strcpy(normalized, "");
+		break;
 	}
-
-	for(i=0; i<n; i++){
-		normalized[6-n+i]=noSeq[i];
-	}
+	// on complète pour atteindre 6 chiffre plus le '\0'
+	strcat(normalized, noSeq);
+	normalized[6]='\0';
 	return normalized;
 }

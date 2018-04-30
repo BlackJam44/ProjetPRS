@@ -14,7 +14,6 @@
 
 #include "fonctions.h"
 
-// fermeture : "FIN" : le client ne demande qu'un seul fichier par session
 
 int main (int argc, char *argv[]) {
   int PORT_COMMUNICATION;
@@ -50,9 +49,9 @@ int main (int argc, char *argv[]) {
   CONNECT* init = (CONNECT*)malloc(sizeof(CONNECT));
   init = openClient(connect_sock, (struct sockaddr*) &adresse);
   PORT_COMMUNICATION = atoi(init->port);
-	printf("Nouveau port de communication : %d\n", PORT_COMMUNICATION);
+	printf("New communication port: %d\n", PORT_COMMUNICATION);
 
-	// socket de communication sur le nouveau port
+	// Communication socket on new port
 	int comm_socket= socket(AF_INET, SOCK_DGRAM, 0);
   if (connect_sock ==  INVALID_SOCKET) {
     perror("Error: socket initialization\n");
@@ -74,113 +73,67 @@ int main (int argc, char *argv[]) {
   }
 
 
-  while (init->result) {
-    printf("\nEn attente de demande de la part du client... \n");
+  printf("\nWaiting for a client request... \n");
 
-    // data reception
-    if( recvfrom(comm_socket, buffer, RCVSIZE, 0, (struct sockaddr*) &adresse2, &size) == -1 ){
-      perror("Error: recvfrom()\n");
-      close(comm_socket);
-      exit(-1);
-    }
-    printf("Fichier requis par le client : %s\n",buffer);
+  // data reception
+  if(recvfrom(comm_socket, buffer, RCVSIZE, 0, (struct sockaddr*) &adresse2, &size) == -1 ){
+    perror("Error: recvfrom()\n");
+    close(comm_socket);
+    exit(-1);
+  }
+  printf("Client requires file: %s\n", buffer);
 
-    FILE* fichier_client = fopen(buffer, "r");
-    if(!fichier_client){
-      perror("Error: file opening\n");
-      exit(-1);
-    } else{
-      int c;
-      int i = 0;
-      int no_seq = 0;
+  FILE* fichier_client = fopen(buffer, "rb");
+  if(!fichier_client){
+    perror("Error: file opening\n");
+    exit(-1);
+  } else{
+    printf("Opening and reading file...\n");
+    int c, i;
+    int no_seq = 0;
 
-      while((c=fgetc(fichier_client)) != EOF) {
-        no_seq++;
-        char* trame = malloc(RCVSIZE*sizeof(char));
-        
+    while(c != EOF) {
+      i = 0;
+      no_seq++;
+      char nb[6];
+    	snprintf(nb, 6, "%d", no_seq);
+      char* frame = (char*)malloc(RCVSIZE*sizeof(char));
+      frame = normalizeNumber(nb);
 
-        while(i < RCVSIZE-6) {
-          chaine[i+6] = (char) c;
+//============================ Problem here!! ==================================
+      while(i < RCVSIZE-6) {
+        if(c = fgetc(fichier_client) != EOF){
+          frame[6+i] = (char) c;
           i++;
         }
       }
 
-      /*
-      do {
-    		FRAME* frame= (FRAME*)malloc(sizeof(FRAME));
-        c = fgetc(fichier_client);
+      printf("Sequence data: %s\n", frame);
+      if(sendto(comm_socket, frame, RCVSIZE, 0, (struct sockaddr*) &adresse2, size) == -1){
+    		perror("Error: frame data\n");
+    		close(comm_socket);
+    		exit(-1);
+    	}
 
-        free(frame);
-        i++;
-      } while ((c != EOF)&&(i<RCVSIZE-6)); */
-
-      fclose(fichier_client);
+      if(recvfrom(comm_socket, buffer, 10, 0, (struct sockaddr*) &adresse2, &size) == -1 ){
+        perror("Error: recvfrom()\n");
+        close(comm_socket);
+        exit(-1);
+      }
+      printf("Received message: %s\n\n", buffer);
+      strcpy(frame, "");
     }
 
-
-
-/* Envoi du fichier au client :
-+ ouverture et lecture du fichier
-* fragmentation en trames et creation no_seq
-* envoi de la trame N
-* reception du ACK N
-* envoi du message "FIN"
-*/
-
-
-
-//-----------------------------------------------------------------------------------------------
-
-/*
-		while(1){
-			FRAME* frame= (FRAME*)malloc(sizeof(FRAME));
-
-			if(recvfrom(comm_socket, frame->seq_no, 6, 0, (struct sockaddr*) &adresse2, &size) == -1 ){
-				perror("Error: file recvfrom(seq_no)\n");
-	      close(comm_socket);
-	      exit(-1);
-			} else printf("\nFrame %s \n", frame->seq_no);
-
-			// detects the end of received file
-			if(strcmp(frame->seq_no, "EOF") == 0){
-				break;
-			}
-
-			if(recvfrom(comm_socket, frame->data, RCVSIZE-6, 0, (struct sockaddr*) &adresse2, &size) == -1 ){
-				perror("Error: file recvfrom(data)\n");
-	      close(comm_socket);
-	      exit(-1);
-			}else{
-				printf("Content received:\n%s\n", frame->data);
-				// writing in the file
-				int nb_written = fwrite(frame->data, RCVSIZE-6, 1, fp);
-				printf("written : %d \n", nb_written);
-			}
-
-		}
-	}
-
-
-    // data echo
-    strcpy(echo, buffer);
-    if(sendto(comm_socket, echo, RCVSIZE, 0, (struct sockaddr*) &adresse2, size) == -1){
-      perror("Error: sendto()\n");
+    fclose(fichier_client);
+    char msg[4];
+    strcpy(msg, "FIN");
+    if(sendto(comm_socket, msg, 4, 0, (struct sockaddr*) &adresse2, size) == -1){
+      perror("Error: FIN message\n");
       close(comm_socket);
       exit(-1);
-    }
-    printf("Echo sent.\n");
-
-		// stop process
-    if (strcmp(buffer,"stop\n") == 0) {
-      init->result = 0;
-			close(comm_socket);
-			printf("Connection closed.\n");
-    }
-
-    memset(buffer,0,RCVSIZE);
-    memset(echo,0,RCVSIZE);
-    */
+    } else printf("Sending \"FIN\" message...\n\n");
   }
+
 
   memset(buffer,0,RCVSIZE);
 
