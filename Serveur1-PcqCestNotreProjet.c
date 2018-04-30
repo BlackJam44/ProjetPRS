@@ -14,6 +14,10 @@
 
 #include "functions.h"
 
+/*
+pour ouvrir le client : ./client1 @IP 9999 nantes.jpg
+*/
+
 // fonction de fermeture
 void signal_handle(int sig){
 	if (sig == SIGINT){
@@ -29,7 +33,8 @@ int main (int argc, char *argv[]) {
   int COMMUNICATION_PORT;
   int size = sizeof(struct sockaddr);
   int valid= 1;
-  char buffer[RCVSIZE];
+  char buffer[RCVSIZE-6];
+	char buffToSend[RCVSIZE];
   char echo[RCVSIZE];
   struct sockaddr_in adresse;
   struct sockaddr_in adresse2;
@@ -87,21 +92,77 @@ int main (int argc, char *argv[]) {
     printf("\nWaiting for data... \n");
     signal(SIGINT, signal_handle);
 
-    // réception de data
+    // réception du nom de fichier à envoyer
     if( recvfrom(comm_socket, buffer, RCVSIZE, 0, (struct sockaddr*) &adresse2, &size) == -1 ){
       perror("Error: recvfrom()\n");
       close(comm_socket);
       exit(-1);
     }
-    printf("Received: %s",buffer);
+    else{
+			printf("Received: %s\n",buffer);
+			wait(1);
 
-    // envoi de fichier à faire !!!!!
+			// Ouverture du fichier et fragmentation
+			FILE* fp;
+			fp = fopen(buffer ,"r");
+			if(fp==NULL){
+				perror("Error: file does not exist\n");
+	      close(comm_socket);
+	      exit(-1);
+			}
 
-    /* Vérifier que le fichier soit bien découpé, que les trames s'envoient bien, faire attention
-    au seq_no et au EOF
-    */
+			fseek(fp, 0, SEEK_END); // définit la position du fichier à la fin
+			size_t fpsize = ftell(fp); // retourne la position actuelle dans le fichier
+			fseek(fp, 0, SEEK_SET);
 
-    /* on envoyait depuis tpclient vers tpserveur. faut faire l'inverse ici */
+			int intNum=0;
+			char charNum[6];
+			int no_segment;
+
+			while(ftell(fp)<fpsize){
+
+				snprintf(charNum, 6, "%d", intNum);
+				no_segment=normalizeNumber(charNum);
+				memset(buffToSend, '\0', 1024);
+				strcpy(buffToSend, no_segment);
+				printf("buffToSend avant : %s\n\n", buffToSend);
+
+				if(fread(buffer, fpsize, 1, fp) == -1){
+					perror("Error: copying file into buffer\n");
+					close(comm_socket);
+					exit(-1);
+				}
+				printf("buffer : %s\n\n", buffer);
+				memmove(buffToSend+6, buffer, 1018);
+				printf("buffToSend après : %s\n\n", buffToSend);
+
+				if(sendto(comm_socket, buffToSend, 1024, 0, (struct sockaddr*) &adresse2, size) == -1){
+					perror("Error: sending file\n");
+					close(comm_socket);
+					exit(-1);
+				}
+
+
+				intNum++;
+
+				//FRAME* imPart;
+				// = fragment(fp, buffer, 0); // fragmentation de la première trame seulement
+
+				/*printf("seq_no : %d \n", imPart->seq_no);
+				char* new_seq_no = normalizeNumber(imPart->seq_no);
+				imPart->seq_no = new_seq_no;
+				printf("new_seq_no : %s \n", imPart->seq_no);
+
+				//test conversion de char* à char* pour normaliser le num de seq
+
+				printf("Size of frame 1 : %d\n", sizeof(imPart));*/
+			}
+			fclose(fp);
+
+			/* Vérifier que le fichier soit bien découpé, que les trames s'envoient bien, faire attention
+			au seq_no et au EOF
+			on envoyait depuis tpclient vers tpserveur. faut faire l'inverse ici */
+		}
 
   }
 

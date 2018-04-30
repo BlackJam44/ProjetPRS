@@ -129,12 +129,14 @@ char* getPort(){
 	return res;
 }
 
+// fragmente les données en frames
 FRAME* fragment(FILE* fp, char* filename, int index){
 	FRAME* frame = (FRAME*)malloc(sizeof(FRAME));
 	int j = index*1018;
 	int nb_read = 0;
 
 	snprintf(frame->seq_no, 6, "%d", index); // copie du numéro de séquence
+	printf("seq_no : %s\n", frame->seq_no);
 
 	int i=0, cont=1;
 	while(cont && (i < RCVSIZE-6)){
@@ -150,12 +152,46 @@ FRAME* fragment(FILE* fp, char* filename, int index){
 	return frame;
 }
 
+// normalise un numéro de séquence sur six chiffres
 char* normalizeNumber(char* noSeq){
-	char normalized[6] = "000000";
-	int n, i;
-  n = strlen(noSeq);
-	for(i=0; i<n; i++){
-		normalized[6-n+i]=noSeq[i];
+	static char normalized[6+1];
+	int s = strlen(noSeq);
+	// ajout des zéros initiaux
+	switch(s){
+		case 0:
+			perror("Error: size of noSeq equal to zero\n");
+			close(socket);
+			exit(-1);
+		break;
+		case 1:
+			strcpy(normalized, "00000");
+		break;
+		case 2:
+			strcpy(normalized, "0000");
+		break;
+		case 3:
+			strcpy(normalized, "000");
+		break;
+		case 4:
+			strcpy(normalized, "00");
+		break;
+		case 5:
+			strcpy(normalized, "0");
+		break;
+		case 6:
+			strcpy(normalized, "");
+		break;
 	}
+	// on complète pour atteindre 6 chiffre plus le '\0'
+	strcat(normalized, noSeq);
+	normalized[6]='\0';
 	return normalized;
+}
+
+// concatène deux chaînes de caractères
+void memcat(unsigned char* src, unsigned char* dest, int destsize){
+    src+=sizeof(src);
+    for (int i=0; i<destsize; i++){
+       *src++ = *dest++;
+   }
 }

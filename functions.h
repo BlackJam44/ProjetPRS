@@ -13,7 +13,7 @@ typedef struct elem_init{
 } CONNECT;
 
 typedef struct elem_frame{
-  char seq_no[6];
+  char* seq_no;
   char data[RCVSIZE-6];
 } FRAME;
 
@@ -23,5 +23,6 @@ int createChannel(int no_port);
 char* getPort();
 FRAME* fragment(FILE* fp, char* filename, int index);
 char* normalizeNumber(char* noSeq);
+void memcat(unsigned char* src, unsigned char* dest, int destsize);
 
 #endif
