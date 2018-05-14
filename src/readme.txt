@@ -5,6 +5,7 @@ Scenario 2 : client2
     ./client2 10.43.6.117 9999 <fichier>
   NB : verifier l'adresse IP a utiliser avec ifconfig (ne pas utiliser la boucle locale)
 
+Client 2 : beaucoup de pertes -> faire un timeout (fonction select())
 
 Utilisation GitHub : path = /home/evelyne/Documents/3TC/PRS/Projet
   git init
