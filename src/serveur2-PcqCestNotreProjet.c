@@ -74,6 +74,34 @@ int main (int argc, char *argv[]) {
 
 
   printf("\nWaiting for a client request... \n");
+  fd_set readfds;
+  struct timeval timeout;
+
+  FD_ZERO(&readfds);
+	FD_SET(comm_socket, &readfds);
+
+	timeout.tv_sec = 3;
+	timeout.tv_usec = 0;
+
+  int desc = select(FD_SETSIZE, &readfds, NULL, NULL, &timeout);
+  if(desc == 0) {
+    printf("No request received. Aborting connection.\n");
+    char msg[4];
+    strcpy(msg, "FIN");
+    if(sendto(comm_socket, msg, 4, 0, (struct sockaddr*) &adresse2, size) == -1){
+      perror("Error: FIN message\n");
+      close(comm_socket);
+      exit(-1);
+    } else {
+        printf("Sending \"FIN\" message...\n\n");
+        memset(buffer,0,RCVSIZE);
+        close(connect_sock);
+        close(comm_socket);
+        printf("\tConnection closed.\n");
+        exit(-1);
+      }
+  }
+
 
   // data reception
   if(recvfrom(comm_socket, buffer, RCVSIZE, 0, (struct sockaddr*) &adresse2, &size) == -1 ){
@@ -91,34 +119,67 @@ int main (int argc, char *argv[]) {
     printf("Opening and reading file...\n");
     int no_seq = 0;     // numero de sequence (ACK)
 
-    while(fichier_client > 0) {
+    fseek(fichier_client, 0, SEEK_END); // initialisation d'un pointeur dans le fichier
+    size_t fpsize = ftell(fichier_client);
+    fseek(fichier_client, 0, SEEK_SET);
+
+    while(ftell(fichier_client) < fpsize) {
+      // preparation du numero de sequence
       no_seq++;
       char nb[6];
     	snprintf(nb, 6, "%d", no_seq);
       char* ack_frame = (char*)malloc(6*sizeof(char));
       ack_frame = normalizeNumber(nb);
-      char* data_frame = (char*)malloc((RCVSIZE-6)*sizeof(char));
-      int readfile = fread(data_frame, RCVSIZE-6, 1, fichier_client);
 
+      // preparation des donnees
+      char* data_frame = (char*)malloc((RCVSIZE-6)*sizeof(char));
+
+      int readfile = fread(data_frame, RCVSIZE-6, 1, fichier_client);
       strcat(ack_frame, data_frame);
 
-      printf("Sequence sent: %s\n", ack_frame);
-      if(sendto(comm_socket, ack_frame, RCVSIZE, 0, (struct sockaddr*) &adresse2, size) == -1){
-    		perror("Error: frame data\n");
-    		close(comm_socket);
-    		exit(-1);
-    	}
+      printf("Sequence sent: %s\n\nPointer position : %d\nFile size : %d\n", ack_frame, ftell(fichier_client), fpsize);
+
+      if(ftell(fichier_client) >= fpsize) {
+        if(sendto(comm_socket, ack_frame, fpsize-((no_seq-1)*1018)+6, 0, (struct sockaddr*) &adresse2, size) == -1){
+      		perror("Error: frame data\n");
+      		close(comm_socket);
+      		exit(-1);
+      	}
+      } else {
+        if(sendto(comm_socket, ack_frame, RCVSIZE, 0, (struct sockaddr*) &adresse2, size) == -1){
+      		perror("Error: frame data\n");
+      		close(comm_socket);
+      		exit(-1);
+      	}
+      }
+
+      // Verifier si une retransmission est necessaire
+      if(FD_ISSET(comm_socket, &readfds) != 0) FD_CLR(comm_socket, &readfds);
+    	else FD_ZERO(&readfds);
+    	FD_SET(comm_socket, &readfds);
+      desc = select(FD_SETSIZE, &readfds, NULL, NULL, &timeout);
+
+      if(desc == 0) {
+        printf("Timeout. Retransmitting...\n");
+        if(sendto(comm_socket, ack_frame, RCVSIZE, 0, (struct sockaddr*) &adresse2, size) == -1){
+          perror("Error: frame data\n");
+          close(comm_socket);
+          exit(-1);
+        }
+      }
 
       if(recvfrom(comm_socket, buffer, 10, 0, (struct sockaddr*) &adresse2, &size) == -1 ){
         perror("Error: recvfrom()\n");
         close(comm_socket);
         exit(-1);
       }
+
       printf("Received message: %s\n\n", buffer);
       strcpy(ack_frame, "");
     }
 
     fclose(fichier_client);
+
     char msg[4];
     strcpy(msg, "FIN");
     if(sendto(comm_socket, msg, 4, 0, (struct sockaddr*) &adresse2, size) == -1){
@@ -133,6 +194,7 @@ int main (int argc, char *argv[]) {
 
 	close(connect_sock);
   close(comm_socket);
+  printf("\tConnection closed successfully.\n");
 
   return 0;
 }

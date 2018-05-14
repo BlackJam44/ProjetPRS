@@ -88,6 +88,7 @@ FRAME* fragment(FILE* fp, char* filename, int index){
 	return frame;
 }
 
+
 char* normalizeNumber(char* noSeq){
 	static char normalized[6+1];
 	int s = strlen(noSeq);
