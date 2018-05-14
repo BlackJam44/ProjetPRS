@@ -83,33 +83,27 @@ int main (int argc, char *argv[]) {
   }
   printf("Client requires file: %s\n", buffer);
 
-  FILE* fichier_client = fopen(buffer, "rb");
+  FILE* fichier_client = fopen(buffer, "rb");   // ouverture du fichier BINAIRE en LECTURE
   if(!fichier_client){
     perror("Error: file opening\n");
     exit(-1);
   } else{
     printf("Opening and reading file...\n");
-    int c, i;
-    int no_seq = 0;
+    int no_seq = 0;     // numero de sequence (ACK)
 
-    while(c != EOF) {
-      i = 0;
+    while(fichier_client > 0) {
       no_seq++;
       char nb[6];
     	snprintf(nb, 6, "%d", no_seq);
-      char* frame = (char*)malloc(RCVSIZE*sizeof(char));
-      frame = normalizeNumber(nb);
+      char* ack_frame = (char*)malloc(6*sizeof(char));
+      ack_frame = normalizeNumber(nb);
+      char* data_frame = (char*)malloc((RCVSIZE-6)*sizeof(char));
+      int readfile = fread(data_frame, RCVSIZE-6, 1, fichier_client);
 
-//============================ Problem here!! ==================================
-      while(i < RCVSIZE-6) {
-        if(c = fgetc(fichier_client) != EOF){
-          frame[6+i] = (char) c;
-          i++;
-        }
-      }
+      strcat(ack_frame, data_frame);
 
-      printf("Sequence data: %s\n", frame);
-      if(sendto(comm_socket, frame, RCVSIZE, 0, (struct sockaddr*) &adresse2, size) == -1){
+      printf("Sequence sent: %s\n", ack_frame);
+      if(sendto(comm_socket, ack_frame, RCVSIZE, 0, (struct sockaddr*) &adresse2, size) == -1){
     		perror("Error: frame data\n");
     		close(comm_socket);
     		exit(-1);
@@ -121,7 +115,7 @@ int main (int argc, char *argv[]) {
         exit(-1);
       }
       printf("Received message: %s\n\n", buffer);
-      strcpy(frame, "");
+      strcpy(ack_frame, "");
     }
 
     fclose(fichier_client);
